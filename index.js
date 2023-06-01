@@ -14,7 +14,7 @@ app.get("/", (req, res) => {
 });
 
 const exerciseSchema = new mongoose.Schema({
-  username: String,
+  user_id: { type: String, required: true },
   description: String,
   duration: Number,
   date: Date,
@@ -52,26 +52,54 @@ const logSchema = new mongoose.Schema({
 });
 
 let User = mongoose.model("User", userSchema);
-
 let Exercise = mongoose.model("Exercise", exerciseSchema);
-
-let exercise = new Exercise({
-  username: "RedH",
-  description: "Running",
-  duration: 60,
-  date: new Date(),
-});
-
-exercise.save();
 
 app.use(bodyParser.urlencoded({ extended: false }));
 
-app.post("/api/users", (req, res) => {
+app.post("/api/users", async (req, res) => {
   console.log(req.body.username);
-  let newUser = new User({
-    username: req.body.username,
-  });
-  newUser.save();
+
+  try {
+    let newUser = new User({
+      username: req.body.username,
+    });
+    const savedUser = await newUser.save();
+    res.json(savedUser);
+  } catch (error) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.post("/api/users/:_id/exercises", async (req, res) => {
+  const user_id = req.body[":_id"];
+  const desc = req.body.description;
+  const duration = req.body.duration;
+  const date = req.body.date;
+
+  try {
+    const existingUser = await User.findOne({ _id: user_id });
+    if (existingUser) {
+      console.log(existingUser);
+      let newExercise = new Exercise({
+        user_id: user_id,
+        description: desc,
+        duration: duration,
+        date: date ? new Date(date) : new Date(),
+      });
+      const savedExercise = await newExercise.save();
+      return res.json({
+        user_id: savedExercise.user_id,
+        username: existingUser.username,
+        description: savedExercise.description,
+        duration: savedExercise.duration,
+        date: new Date(savedExercise.date).toDateString(),
+      });
+    } else {
+      res.send("User not found");
+    }
+  } catch (error) {
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
 const listener = app.listen(process.env.PORT || 3000, () => {
