@@ -57,8 +57,6 @@ let Exercise = mongoose.model("Exercise", exerciseSchema);
 app.use(bodyParser.urlencoded({ extended: false }));
 
 app.post("/api/users", async (req, res) => {
-  console.log(req.body.username);
-
   try {
     let newUser = new User({
       username: req.body.username,
@@ -75,11 +73,9 @@ app.post("/api/users/:_id/exercises", async (req, res) => {
   const desc = req.body.description;
   const duration = req.body.duration;
   const date = req.body.date;
-
   try {
     const existingUser = await User.findOne({ _id: user_id });
     if (existingUser) {
-      console.log(existingUser);
       let newExercise = new Exercise({
         user_id: user_id,
         description: desc,
@@ -104,4 +100,13 @@ app.post("/api/users/:_id/exercises", async (req, res) => {
 
 const listener = app.listen(process.env.PORT || 3000, () => {
   console.log("Your app is listening on port " + listener.address().port);
+});
+
+app.get("/api/users", async (req, res) => {
+  const users = await User.find({}).select("-__v");
+  if (users) {
+    res.json(users);
+  } else {
+    res.send("No useres in database");
+  }
 });
