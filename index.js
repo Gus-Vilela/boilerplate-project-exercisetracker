@@ -69,7 +69,7 @@ app.post("/api/users", async (req, res) => {
 });
 
 app.post("/api/users/:_id/exercises", async (req, res) => {
-  const user_id = req.body[":_id"];
+  const user_id = req.params._id;
   const desc = req.body.description;
   const duration = req.body.duration;
   const date = req.body.date;
@@ -84,11 +84,11 @@ app.post("/api/users/:_id/exercises", async (req, res) => {
       });
       const savedExercise = await newExercise.save();
       return res.json({
-        user_id: savedExercise.user_id,
+        _id: savedExercise.user_id,
         username: existingUser.username,
-        description: savedExercise.description,
-        duration: savedExercise.duration,
         date: new Date(savedExercise.date).toDateString(),
+        duration: savedExercise.duration,
+        description: savedExercise.description,
       });
     } else {
       res.send("User not found");
@@ -110,3 +110,46 @@ app.get("/api/users", async (req, res) => {
     res.send("No useres in database");
   }
 });
+
+
+app.get("/api/users/:_id/logs", async (req, res) => {
+  const {from,to,limit} = req.query;
+  const id = req.params._id;
+  try{
+  const user = await User.findOne({ _id: id });
+  if(!user){
+    res.send("User not found");
+  }else{
+    let filter = {
+      user_id: user._id
+    }
+    if(from || to){
+      filter.date = {};
+      if(from){
+        filter.date["$gte"] = new Date(from);
+      }
+      if(to){
+        filter.date["$lte"] = new Date(to);
+      }
+    }
+    
+    const exercises = await Exercise.find(filter).limit(+limit);
+    
+    const log = exercises.map(e => ({
+      description: e.description,
+      duration: e.duration,
+      date: e.date.toDateString()
+    }))
+    
+    res.json({
+      username: user.username,
+      count: exercises.length,
+      _id: user._id,
+      log 
+    })
+  }
+  }catch(error){
+    console.log(error);
+    res.status(500).json({ error: "Server error" });
+  }
+})
